@@ -1,4 +1,12 @@
--- Code to Haskell lab assignment 2 in the course D7012E by Håkan Jonsson
+-- Lab2: Expression parsing
+-- Task: See labH2.pdf
+
+-- Most code is from: Haskell lab assignment 2 in the course D7012E by Håkan Jonsson
+-- All code modifications by student are marked with a comment 
+-- Author: Hannes Furhoff, hanfur-0@student.ltu.se
+
+-- Note to self before hand-in; Check for upstream errors with diff commands
+
 
 import Data.Char
 
@@ -52,10 +60,14 @@ parse = fst . buildexpr
                        p -> p
       | otherwise = error "illegal symbol"
 
+
 unparse :: EXPR -> String
 unparse (Const n) = show n
 unparse (Var s) = s
 unparse (Op oper e1 e2) = "(" ++ unparse e1 ++ oper ++ unparse e2 ++ ")"
+-- ===== Unparse general apps
+unparse (App oper x) = oper ++ "(" ++ unparse x ++ ")"
+
 
 eval :: EXPR -> [(String,Float)] -> Float
 eval (Const n) _ = fromIntegral n
@@ -64,6 +76,12 @@ eval (Op "+" left right) env = eval left env + eval right env
 eval (Op "-" left right) env = eval left env - eval right env
 eval (Op "*" left right) env = eval left env * eval right env
 eval (Op "/" left right) env = eval left env / eval right env
+-- ===== Eval Sin / Cos / Log / Exp
+eval (App "sin" x) env = sin (eval x env)
+eval (App "cos" x) env = cos (eval x env)
+eval (App "log" x) env = log (eval x env)
+eval (App "exp" x) env = exp (eval x env)
+
 
 diff :: EXPR -> EXPR -> EXPR
 diff _ (Const _) = Const 0
@@ -76,7 +94,13 @@ diff v (Op "*" e1 e2) =
   Op "+" (Op "*" (diff v e1) e2) (Op "*" e1 (diff v e2))
 diff v (Op "/" e1 e2) =
   Op "/" (Op "-" (Op "*" (diff v e1) e1) (Op "*" e1 (diff v e2))) (Op "*" e2 e2)
-diff _ _ = error "can not compute the derivative"
+-- ===== App derivatives
+diff v (App "sin" x) = App "cos" (diff v x)
+diff v (App "cos" x) = Op "-" (Const 0) (App "sin" (diff v x))
+diff v (App "log" x) = Op "/" (Const 1) (diff v x) -- Natural log 
+diff v (App "exp" x) = App "exp" (diff v x)
+diff _ _ = error "can not compute the derivative" 
+
 
 simplify :: EXPR -> EXPR
 simplify (Const n) = Const n
@@ -94,3 +118,26 @@ simplify (Op oper left right) =
       ("/",e,Const 1) -> e
       ("-",le,re)     -> if left==right then Const 0 else Op "-" le re
       (op,le,re)      -> Op op le re
+-- ===== Simplify apps
+simplify (App "sin" x) = App "sin" (simplify x)
+simplify (App "cos" x) = App "cos" (simplify x)
+simplify (App "log" x) = App "log" (simplify x)
+simplify (App "exp" x) = App "exp" (simplify x)
+
+
+
+-- Task 2: mkfun
+-- Note: Code gets highlighted for unnecessary lambda 
+-- But this behavior is required in this task (i.e. dont remove)
+mkfun :: (EXPR, EXPR) -> (Float -> Float)
+mkfun (b,v) = \vi -> eval b [(unparse v, vi)]
+
+
+-- Task 3: N-R iteration
+findzero :: String -> String -> Float -> Float
+findzero x f x0
+ | abs (xn - x0) < 0.0001 = xn
+ | otherwise = findzero x f xn
+ where fp = parse f
+       fpd = diff (parse x) fp
+       xn = x0 - eval (Op "/" fp fpd) [(x,x0)]

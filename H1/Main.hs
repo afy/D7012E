@@ -1,7 +1,6 @@
 -- Smallest K-List
+-- Task: See labH1.pdf. No HOF allowed.
 -- Author: Hannes Furhoff, hanfur-0@student.ltu.se
-
-
 
 import Data.List
 import Data.Tuple
@@ -11,7 +10,7 @@ import Data.Tuple
 calcSum :: [Int] -> Int
 calcSum [] = 0
 calcSum (x:xs) 
- | (xs == []) = x
+ | null xs = x
  | otherwise = x + calcSum xs
 
 
@@ -23,18 +22,15 @@ insertSubset (a,b) v = [xl | xl <- v, fst xl <= a] ++ [(a,b)] ++ [xu | xu <- v, 
 -- Iterate through original set and transform to ordered list according to calcsize
 transformSubsets :: [ [Int] ] -> [ (Int,[Int]) ]
 transformSubsets (x:xs) 
- | (xs == []) = [element]
+ | null xs = [element]
  | otherwise = insertSubset element (transformSubsets xs)
  where element = (calcSum x, x)
 
 
 -- Get list of all subsets
 getSubsets :: [Int] -> [ [Int] ]
-getSubsets v 
- | (v==[]) = []
- | otherwise = [getsublist i v | i <- [1..(length v)] ] ++ getSubsets (drop 1 v)
- where getsublist i v = take i v
-
+getSubsets v = [ getslice v i j | i <- [0..length v - 1], j <- [i..length v - 1 ] ] 
+ where getslice v i j = [ v !! vi | vi <- [i..j] ]
 
 getSet :: [Int] -> [ (Int,[Int]) ]
 getSet = transformSubsets . getSubsets
@@ -42,8 +38,5 @@ getSet = transformSubsets . getSubsets
 
 -- Return k min sizes
 getKset :: [Int] -> Int -> [ (Int,[Int]) ]
-getKset v k 
- | (k <= 0) = []
- | (k == 1) = [ head ps ] 
- | otherwise = (getKset v (k-1)) ++ [(ps !! k)]
+getKset v k = [ ps !! vi | vi <- [0..k-1] ]
  where ps = getSet v

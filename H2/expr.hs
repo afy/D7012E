@@ -118,7 +118,7 @@ simplify (Op oper left right) =
       ("/",e,Const 1) -> e
       ("-",le,re)     -> if left==right then Const 0 else Op "-" le re
       (op,le,re)      -> Op op le re
--- ===== Simplify apps
+-- ===== Simplify apps (just simplify x)
 simplify (App "sin" x) = App "sin" (simplify x)
 simplify (App "cos" x) = App "cos" (simplify x)
 simplify (App "log" x) = App "log" (simplify x)

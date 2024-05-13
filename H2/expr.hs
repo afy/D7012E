@@ -5,8 +5,6 @@
 -- All code modifications by student are marked with a comment 
 -- Author: Hannes Furhoff, hanfur-0@student.ltu.se
 
--- Note to self before hand-in; Check for upstream errors with diff commands
-
 
 import Data.Char
 

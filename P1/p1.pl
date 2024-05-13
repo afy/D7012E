@@ -7,15 +7,11 @@
 
 
 % Movement
-change_state(
+move(
     state(r1, [_,_,_], Hands), member(steel_key, Hands), 
     move_room,
     state(r2, [_,_,_], Hands)
 )
-
-
-
-
 move(
     state(r1, [_,_,_], Hands), member(brass_key, Hands), 
     move_rooms,
@@ -31,7 +27,7 @@ move(
     move_rooms,
     state(r1, [_,_,_], Hands)
 )
- 
+
 
 
 % Item handling
@@ -47,13 +43,12 @@ move(
 )
 
 
+package_delivered(r2, [_,_,r2], [_,_])
 
-% Goal + code run
-can_find(State, [T | Trace]) :-
+package_delivered(State, [T | Trace]) :-
     ...
     ...
 
-
-can_find(
-    state(r1, r2, [empty, empty]), Trace
+package_delivered(
+    state(r1, [r1, r1, r2], [empty, empty]), Trace
 )

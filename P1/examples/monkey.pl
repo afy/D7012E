@@ -1,5 +1,5 @@
 % A solution to the problem "Monkey and Banana"
-% From the prolog book by Ivan Bratko/in Håkan's slides
+% From the prolog book by Ivan Bratko/in Håkans slides
 % Adapted by Håkan so it returns the actions in a list
 % Note that there is no limit on the number of
 % recursive steps

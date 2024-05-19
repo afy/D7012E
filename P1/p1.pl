@@ -25,42 +25,25 @@ move(
     state(r1, L, H),
     move_room,
     state(r2, L, H)
-) :- member(steel_key, H), writeln("R1 -> R2").
-
-move(
-    state(r2, L, H), 
-    move_rooms,
-    state(r1, L, H)
-) :- member(steel_key, H), writeln("R2 -> R1").
+) :- member(steel_key, H), write("R1 -> R2"), writeln(H).
 
 move(
     state(r1, L, H), 
     move_rooms,
     state(r3, L, H)
-) :- member(brass_key, H), writeln("R1 -> R3").
+) :- member(brass_key, H), write("R1 -> R3"), writeln(H).
+
+move(
+    state(r2, L, H), 
+    move_rooms,
+    state(r1, L, H)
+) :- member(steel_key, H), write("R2 -> R1"), writeln(H).
 
 move(
     state(r3, L, H),  
     move_rooms,
     state(r1, L, H)
-) :- member(brass_key, H), writeln("R3 -> R1").
-
-
-
-
-% Item drop
-move(
-    state(R, L, H), 
-    drop_item_left,
-    state(R, Newlist, NewHands)
-) :- [I | Tail] = H, itemlist(I, L, R, Newlist), NewHands = [empty | Tail].
-
-move(
-    state(R, L, H), 
-    drop_item_right,
-    state(R, Newlist, NewHands)
-) :- [Head | [I]] = H, itemlist(I, L, R, Newlist), NewHands = [Head | [empty]].
-
+) :- member(brass_key, H), write("R3 -> R1"), writeln(H).
 
 
 
@@ -70,30 +53,52 @@ move(
     pickup_item_left(Item),
     state(R, NewList, NewHands)
  ) :- [I | Tail] = H, isempty(I), checkroom(Item, L, R),
-      itemlist(Item, L, empty, NewList), NewHands = [Item | Tail].
+      itemlist(Item, L, empty, NewList), NewHands = [Item | Tail],
+      write('pu '), write(R), writeln(NewHands).
 
  move(
     state(R, L, H),
     pickup_item_right(Item),
     state(R, NewList, NewHands)
  ) :- [Head | [I]] = H, isempty(I), checkroom(Item, L, R),
-      itemlist(Item, L, empty, NewList), NewHands = [Head | Item].
+      itemlist(Item, L, empty, NewList), NewHands = [Head | Item],
+      write('pu '),  write(R), writeln(NewHands).
 
 
 
-invalid(state(_,A,A,B)) :-
-    A \== B.
-invalid(state(A,A,_,B)) :-
-    A \== B.
+% Item drop
+move(
+    state(R, L, H), 
+    drop_item_left,
+    state(R, Newlist, NewHands)
+) :- [I | Tail] = H, itemlist(I, L, R, Newlist), NewHands = [empty | Tail],
+write('dropped '),  write(R),writeln(NewHands).
+
+move(
+    state(R, L, H), 
+    drop_item_right,
+    state(R, Newlist, NewHands)
+) :- [Head | [I]] = H, itemlist(I, L, R, Newlist), NewHands = [Head | [empty]],
+write('dropped '),  write(R),writeln(NewHands).
+
+
+
+
 
 
 % Run DFS
-package_delivered(r2, [_,_,r2], [done| []]).
-package_delivered(State, N, Trace) :-
+start_package_delivered(State, N, Trace) :-
+    package_delivered(State, N, [State], Trace).
+
+% Run DFS
+package_delivered(r2, [_,_,r2], [done| []]) :- !.
+package_delivered(State, N, Visited, Trace) :-
     N > 0,
     move(State, Move, NewState),
-    \+(invalid(NewState)),
-    package_delivered(NewState, N-1, TraceCo),
+    not(member(NewState, [Visited])),
+    write('STEPPING ==============='), writeln(NewState),
+    NewN is N - 1,
+    package_delivered(NewState, NewN, [ State | Visited], TraceCo),
     Trace = [Move | TraceCo].
 
-% package_delivered(state(r1, [r1, r2, r3], [empty, empty]), 13, Trace).
+% start_package_delivered(state(r1, [r1, r2, r3], [empty, empty]), 6, Trace).

@@ -3,8 +3,8 @@
 %    D7012E Declarative languages
 %    Luleå University of Technology
 %
-%    Student full name: <TO BE FILLED IN BEFORE THE GRADING> 
-%    Student user id  : <TO BE FILLED IN BEFORE THE GRADING> 
+%    Student full name: Hannes Furhoff
+%    Student user id  : hanfur-0
 %
 /* ------------------------------------------------------- */
 
@@ -68,10 +68,10 @@
 
 initBoard([ [.,.,.,.,.,.], 
             [.,.,.,.,.,.],
-	    [.,.,1,2,.,.], 
-	    [.,.,2,1,.,.], 
+	    	[.,.,1,2,.,.], 
+	    	[.,.,2,1,.,.], 
             [.,.,.,.,.,.], 
-	    [.,.,.,.,.,.] ]).
+	    	[.,.,.,.,.,.] ]).
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
 %
@@ -79,9 +79,13 @@ initBoard([ [.,.,.,.,.,.],
 %%% Using initBoard define initialize(InitialState,InitialPlyr). 
 %%%  holds iff InitialState is the initial state and 
 %%%  InitialPlyr is the player who moves first. 
+% Human moves first = 1, robot = 2
+initialize(InitialState, InitialPlayer) :- 
+	initBoard(InitialState),
+	InitialPlayer = 1.
 
-
-
+opponent(1,2).
+opponent(2,1).
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -91,9 +95,31 @@ initBoard([ [.,.,.,.,.,.],
 %% define winner(State,Plyr) here.  
 %     - returns winning player if State is a terminal position and
 %     Plyr has a higher score than the other player 
+countstones([],_,0).
+countstones([R1|RR],Player,Tot) :-
+	countrow(R1,Player,Tot2), countstones(RR,Player,Tot3),
+	Tot is Tot2 + Tot3.
+countrow([],_,0).
+countrow([V1|VR],Player,Tot) :- 
+	( V1==Player 
+		-> countrow(VR,Player,TN), Tot is TN+1 
+		;  countrow(VR,Player,TN), Tot is TN
+	).
 
+% Return the #of stones for both players
+getstones(State,P1,P2) :- 
+	countstones(State,1,P1),
+	countstones(State,2,P2).
 
+winner(State,WinningPlayer) :- 
+	terminal(State),
+	getstones(State,P1,P2),
+	P1 < P2,  WinningPlayer = P1.
 
+winner(State,WinningPlayer) :- 
+	terminal(State),
+	getstones(State,P1,P2),
+	P1 > P2,  WinningPlayer = P2.
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -102,9 +128,10 @@ initBoard([ [.,.,.,.,.,.],
 %%
 %% define tie(State) here. 
 %    - true if terminal State is a "tie" (no winner) 
-
-
-
+tie(State) :- 
+	terminal(State),
+	getstones(State,P1,P2), 
+	P1==P2.
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -113,9 +140,11 @@ initBoard([ [.,.,.,.,.,.],
 %%
 %% define terminal(State). 
 %   - true if State is a terminal   
-
-
-
+terminal(State) :- 
+	moves(1,State,LiP), 
+	moves(2,State,LiR),
+	length(LiP,LP), length(LiR,LR),
+	LP==0, LR==0.
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -123,7 +152,6 @@ initBoard([ [.,.,.,.,.,.],
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%showState(State)%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% given helper. DO NOT  change this. It's used by play.pl
 %%
-
 showState( G ) :- 
 	printRows( G ). 
  
@@ -146,9 +174,37 @@ printList([H | L]) :-
 %% define moves(Plyr,State,MvList). 
 %   - returns list MvList of all legal moves Plyr can make in State
 %
+moves(Player,State,MyList) :- findall([X,Y], (
+	between(0,5,X),
+	between(0,5,Y),
+	get(State, [X,Y], '.'),
+	dir(DX,DY),
+	is_adjacent_opponent(State,Player,[X,Y],[DX,DY]),	
+	can_flip_path(Player,State,[X,Y],[DX,DY])
+), MvL), list_to_set(MvL,MyList).
 
+move(X,Y,DX,DY,X2,Y2) :- 
+	X2 is X + DX, Y2 is Y + DY, 
+	X2 >= 0, X2 < 6, 
+	Y2 >= 0, Y2 < 6. 
 
+% T/F if path from P->P exists
+can_flip_path(Player,State,[X,Y],[DX,DY]) :-
+	move(X,Y,DX,DY,X2,Y2),
+	get(State,[X2,Y2],Tile),
+	( Tile == Player ; can_flip_path_step(Player,State,[X2,Y2],[DX,DY]) ).
+	
+can_flip_path_step(Player,State,[X,Y],[DX,DY]) :-
+	move(X,Y,DX,DY,X2,Y2),
+	get(State,[X2,Y2],Tile),
+	( Tile == Player
+	; Tile == Opponent -> can_flip_path_step(Player,State,[X2,Y2],[DX,DY])).
 
+is_adjacent_opponent(State,Player,[X,Y],[DX,DY]) :- 
+	move(X,Y,DX,DY,X2,Y2), opponent(Player,Opponent), get(State,[X2,Y2],Opponent).
+
+dir(-1,0). dir(1,0). dir(0,-1). dir(0,1).
+dir(-1,-1). dir(-1,1). dir(1,-1). dir(1,1).
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -159,9 +215,33 @@ printList([H | L]) :-
 %   - given that Plyr makes Move in State, it determines NewState (i.e. the next 
 %     state) and NextPlayer (i.e. the next player who will move).
 %
+nextState(Player,[X,Y],State,NewState,NextPlayer) :-
+	validmove(Player,State,[X,Y]),
+	dir(DX,DY),
+	set(State,NState,[X,Y],Player),
+	opponent(Player,NextPlayer),
+	trace_flip_path(Player,NState,NewState,[X,Y],[DX,DY],[]).
 
+trace_flip_path(Player,State,NewState,[X,Y],[DX,DY],[]) :-
+	move(X,Y,DX,DY,X2,Y2),
+	get(State,[X2,Y2],Tile),
+	( Tile == Player ; 
+		trace_flip_path_step(Player,State,NewState,[X2,Y2],[DX,DY],[[X2,Y2]]) 
+	).
+	
+trace_flip_path_step(Player,State,NewState,[X,Y],[DX,DY],Trace) :-
+	move(X,Y,DX,DY,X2,Y2),
+	get(State,[X2,Y2],Tile),
+	( Tile == Player -> retrace_path(Player,State,NewState,Trace)
+	; Tile == Opponent -> 
+		trace_flip_path_step(Player,State,NewState,[X2,Y2],[DX,DY],[[X2,Y2]|Trace])
+	).
 
-
+retrace_path(_,State,State,[]).
+retrace_path(Player,State,NewState,[H|T]) :-
+	write('Tracing: ' ), write(H), write(' in '), writeln([H|T]),
+	set(State, State1, H, Player),
+	retrace_path(Player,State1,NewState,T).
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -170,9 +250,10 @@ printList([H | L]) :-
 %% 
 %% define validmove(Plyr,State,Proposed). 
 %   - true if Proposed move by Plyr is valid at State.
-
-
-
+validmove(Player,State,[X,Y]) :- 
+	moves(Player,State,R),
+	member([X,Y],R).
+	
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -186,10 +267,16 @@ printList([H | L]) :-
 %   NOTE2. If State is not terminal h should be an estimate of
 %          the value of state (see handout on ideas about
 %          good heuristics.
-
-
-
-
+h(State,Val) :- 
+	terminal(State),
+	( winner(State, 1) 
+		-> val is -100
+		;  ( winner(State, 2) 
+			-> val is 100
+			;  tie(State) -> val is 0
+	)).
+h(State,Val) :-
+	val is 0.
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
 %
@@ -198,9 +285,7 @@ printList([H | L]) :-
 %% define lowerBound(B).  
 %   - returns a value B that is less than the actual or heuristic value
 %     of all states.
-
-
-
+lowerBound(B) :- B = -101.
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -210,9 +295,7 @@ printList([H | L]) :-
 %% define upperBound(B). 
 %   - returns a value B that is greater than the actual or heuristic value
 %     of all states.
-
-
-
+upperBound(B) :- B = 101.
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -224,10 +307,10 @@ printList([H | L]) :-
 %                   do NOT change these!                                %
 %                                                                       %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% get(Board, Point, Element)
+% get(State, Point, Element)
 %    : get the contents of the board at position column X and row Y
-% set(Board, NewBoard, [X, Y], Value):
-%    : set Value at column X row Y in Board and bind resulting grid to NewBoard
+% set(State, NewBoard, [X, Y], Value):
+%    : set Value at column X row Y in State and bind resulting grid to NewBoard
 %
 % The origin of the board is in the upper left corner with an index of
 % [0,0], the upper right hand corner has index [5,0], the lower left
@@ -280,17 +363,17 @@ printList([H | L]) :-
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
 %
-% get(Board, Point, Element): get the value of the board at position
+% get(State, Point, Element): get the value of the board at position
 % column X and row Y (indexing starts at 0).
 % Do not change get:
 
-get( Board, [X, Y], Value) :- 
-	nth0( Y, Board, ListY), 
+get( State, [X, Y], Value) :- 
+	nth0( Y, State, ListY), 
 	nth0( X, ListY, Value).
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
 %
-% set( Board, NewBoard, [X, Y], Value): set the value of the board at position
+% set( State, NewBoard, [X, Y], Value): set the value of the board at position
 % column X and row Y to Value (indexing starts at 0). Returns the new board as
 % NewBoard. Do not change set:
 

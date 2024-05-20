@@ -11,8 +11,6 @@
 
 % Robot can only pick up if a #[SK,BK,P] < 2
 % Note: required to be inverted (not) in practice for this task
-% This approach was found at github.com/rickos99, 
-% but ALL code was implemented from scratch without using any code form the repo.
 too_many_items(holding,holding,holding).
 
 

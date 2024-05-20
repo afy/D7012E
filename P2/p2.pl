@@ -1,5 +1,5 @@
-% Smallest K-List
-% Task: K-list implementation in prolog
+% Smallest K-List (Prolog ver.)
+% Task: K-list implementation from H1 in prolog
 % Author: Hannes Furhoff, hanfur-0@student.ltu.se
 
 % Generate list of all indices [i,j] for subsets of list
@@ -9,10 +9,12 @@ getIndices(L, Slices) :-
     findall(N, between(0, ListLen, N), Range),  % Generate range [0..len(L)-1]
 
     % Generate all possible slice indices [i,j]
-    % Where i=[0..len(L)-1], j=[0..len(L)-1], 
+    % Where i=[0..len(L)-1], j=[0..len(L)-1], and i<=j 
+    % With list_to_set to remove duplicates (just to be safe).
     findall([I,J], (
         member(I, Range),
-        member(J, Range)
+        member(J, Range),
+        I =< J
     ), Res), list_to_set(Res, Slices).
 
 
@@ -33,7 +35,7 @@ getSubsetsFromIndices(_,[],[]).
 getSubsetsFromIndices(Orig, [[I,J]|T], Subsets) :- 
     getSubsetsFromIndices(Orig, T, RecRes),
     getSlice(Orig,[I,J], Subsliced),
-    append(RecRes, [I,J,Subsliced], Subsets).
+    append(RecRes, [[I,J,Subsliced]], Subsets).
 
 
 
@@ -45,13 +47,14 @@ getListSum([H|T], Sum) :-
 
 
 
-% Sort a given list of subsets according to sum(V)
-sortSubsets([], []) :- writeln('recend').
+% Sort a given list of subsets according to sum(V) 
+% Return with sum(V) in sublist in accordance to H1 presentation feedback
+sortSubsets([], []).
 sortSubsets([[I,J,V]|T], R) :-
     sortSubsets(T, RecRes),
     getListSum(V, VSum),
 
-    % Get all previous results size(rec) < size(V)
+    % Get all previous results size(rec) <= size(V)
     findall([V2Sum,I2,J2,V2], (
         member([V2Sum,I2,J2,V2], RecRes),
         VSum >= V2Sum
@@ -63,16 +66,17 @@ sortSubsets([[I,J,V]|T], R) :-
         VSum < V2Sum
     ), Upper),
     
-    % Concat Lower : V : upper
+    % Concat Lower : [V] : upper
     append(Lower, [[VSum,I,J,V]], R1),
     append(R1, Upper, R).
 
 
 
-% Printout the first k sets in desc order (lowest size highest)
+% Printout the first k sets in desc order (lowest size highest up in list)
 printFirstKSets([[VSum,I,J,V]|T], K) :-
     K > 0,
-    format('~w\t~w\t~w\t~w\n', [VSum,I,J,V]),
+    AdjI is I + 1, AdjJ is J + 1,                   % Adjust indices for printing
+    format('~w\t~w\t~w\t~w\n', [VSum,AdjI,AdjJ,V]),
     NewK is K - 1,
     printFirstKSets(T, NewK).
 
@@ -85,5 +89,9 @@ getKSubsets(Source, K) :-
     sortSubsets(Subsets, SortedSubsets),
 
     % Show results
-    writeln('Size\ti\tj\tlist'),
+    writeln('size\ti\tj\tsublist'),
     printFirstKSets(SortedSubsets, K).
+
+% Test cases from H1 (Both pass)
+% getKSubsets([24,-11,-34,42,-24,7,-19,21], 6).
+% getKSubsets([3,2,-4,3,2,-5,-2,2,3,-3,2,-5,6,-2,2,3], 8).

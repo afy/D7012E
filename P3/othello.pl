@@ -41,12 +41,6 @@
 %          * upperBound(B)
 % /* ------------------------------------------------------ */
 
-
-
-
-
-
-
 % /* ------------------------------------------------------ */
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -58,10 +52,6 @@
 %    1 means player one has a stone in this position
 %    2 means player two has a stone in this position. 
 
-
-
-
-
 % DO NOT CHANGE THE COMMENT BELOW.
 %
 % given helper: Inital state of the board
@@ -72,6 +62,33 @@ initBoard([ [.,.,.,.,.,.],
 	    	[.,.,2,1,.,.], 
             [.,.,.,.,.,.], 
 	    	[.,.,.,.,.,.] ]).
+
+%%%%%%%%%%%%%%%%%%% TESTBOARDS RESULTS %%%%%%%%%%%%%%%%%%%
+% TB1: 
+% TB2: 
+% TB3: 
+% FLIP_RLTOP: 
+% FLIP_LRBTTM: 
+% FLIP_TBleft: 
+% FLIP_BTright: 
+% FLIP_DIAGULTOLR: 
+% FLIP_DIAGURTOLL: 
+% NOMNOFA:
+% NOMNOFB:
+% FLIPRLO1: 
+% FLIPALL81: 
+% FLIPALL82: 
+% TIESIN2:
+% TIE4EC: 
+% TIE4EB:
+% TIE1MV: 
+% TIE301MV:
+% TIE302MV:
+% WININ2: 
+% ONLY1:
+% ONLY2: 
+% FORCENULL2:
+% FORCENULL1:
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
 %
@@ -87,6 +104,15 @@ initialize(InitialState, InitialPlayer) :-
 opponent(1,2).
 opponent(2,1).
 
+dir(-1,0). 	% W
+dir(1,0).	% E
+dir(0,-1). 	% N
+dir(0,1).	% S
+dir(-1,-1).	% NW
+dir(-1,1).	% SW
+dir(1,-1).	% NE
+dir(1,1).	% SE
+
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
 %
@@ -97,8 +123,8 @@ opponent(2,1).
 %     Plyr has a higher score than the other player 
 countstones([],_,0).
 countstones([R1|RR],Player,Tot) :-
-	countrow(R1,Player,Tot2), countstones(RR,Player,Tot3),
-	Tot is Tot2 + Tot3.
+	countrow(R1,Player,Tot2), countstones(RR,Player,RecTot),
+	Tot is Tot2 + RecTot.
 countrow([],_,0).
 countrow([V1|VR],Player,Tot) :- 
 	( V1==Player 
@@ -107,19 +133,18 @@ countrow([V1|VR],Player,Tot) :-
 	).
 
 % Return the #of stones for both players
-getstones(State,P1,P2) :- 
-	countstones(State,1,P1),
-	countstones(State,2,P2).
+getstones(State,Player,C1,C2) :- 
+	opponent(Player,Opponent),
+	countstones(State,Player,C1),
+	countstones(State,Opponent,C2).
 
-winner(State,WinningPlayer) :- 
+winner(State,Player) :- 
 	terminal(State),
-	getstones(State,P1,P2),
-	P1 < P2,  WinningPlayer = 1.
+	getstones(State,Player,P1,P2),
+	(P1 < P2 -> Player is 1
+	; P2 > P1 -> Player is 2
+	).
 
-winner(State,WinningPlayer) :- 
-	terminal(State),
-	getstones(State,P1,P2),
-	P1 > P2,  WinningPlayer = 2.
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -130,7 +155,8 @@ winner(State,WinningPlayer) :-
 %    - true if terminal State is a "tie" (no winner) 
 tie(State) :- 
 	terminal(State),
-	getstones(State,P1,P2), 
+	countstones(State,1,P1),
+	countstones(State,2,P2),
 	P1==P2.
 
 
@@ -179,9 +205,12 @@ moves(Player,State,MyList) :- findall([X,Y], (
 	between(0,5,Y),
 	get(State, [X,Y], '.'),
 	dir(DX,DY),
-	is_adjacent_opponent(State,Player,[X,Y],[DX,DY]),	
+	is_adjacent_opponent(Player,State,[X,Y],[DX,DY]),	
 	can_flip_path(Player,State,[X,Y],[DX,DY])
-), MvL), list_to_set(MvL,MyList).
+), MvL),
+
+% Pass when no other move is allowed
+( MvL==[] -> MyList is ['n'] ; list_to_set(MvL,MyList)).
 
 move(X,Y,DX,DY,X2,Y2) :- 
 	X2 is X + DX, Y2 is Y + DY, 
@@ -202,11 +231,9 @@ can_flip_path_step(Player,State,[X,Y],[DX,DY]) :-
 	( Tile == Player
 	; Tile == Opponent -> can_flip_path_step(Player,State,[X2,Y2],[DX,DY])).
 
-is_adjacent_opponent(State,Player,[X,Y],[DX,DY]) :- 
+is_adjacent_opponent(Player,State,[X,Y],[DX,DY]) :- 
 	move(X,Y,DX,DY,X2,Y2), opponent(Player,Opponent), get(State,[X2,Y2],Opponent).
 
-dir(-1,0). dir(1,0). dir(0,-1). dir(0,1).
-dir(-1,-1). dir(-1,1). dir(1,-1). dir(1,1).
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -219,31 +246,26 @@ dir(-1,-1). dir(-1,1). dir(1,-1). dir(1,1).
 %
 nextState(Player,[X,Y],State,NewState,NextPlayer) :-
 	validmove(Player,State,[X,Y]),
-	dir(DX,DY),
-	set(State,NState,[X,Y],Player),
 	opponent(Player,NextPlayer),
-	%write(Player), write(' moved '), writeln([X,Y]),
-	trace_flip_path(Player,NState,NewState,[X,Y],[DX,DY],[]),
-	showState(NewState).
+	set(State,State1,[X,Y],Player),
+	dir(DX,DY),
+	trace_flip_path(Player,State1,NewState,[X,Y],[DX,DY],[]).
 
-trace_flip_path(Player,State,NewState,[X,Y],[DX,DY],[]) :-
-	move(X,Y,DX,DY,X2,Y2),
-	opponent(Player,Opponent),
-	get(State,[X2,Y2],Opponent),
-	trace_flip_path_step(Player,State,NewState,[X2,Y2],[DX,DY],[[X2,Y2]]).
-	
-trace_flip_path_step(Player,State,NewState,[X,Y],[DX,DY],Trace) :-
+nextState(Player,['n'],State,NewState,NextPlayer) :- % Skip action
+	NewState is State,
+	opponent(Player, NextPlayer),
+
+trace_flip_path(Player,State,NewState,[X,Y],[DX,DY],Trace) :-
 	move(X,Y,DX,DY,X2,Y2),
 	get(State,[X2,Y2],Tile),
 	opponent(Player,Opponent),
 	( Tile == Player -> retrace_path(Player,State,NewState,Trace)
 	; Tile == Opponent -> 
-		trace_flip_path_step(Player,State,NewState,[X2,Y2],[DX,DY],[[X2,Y2]|Trace])
+		trace_flip_path(Player,State,NewState,[X2,Y2],[DX,DY],[[X2,Y2]|Trace])
 	).
 
 retrace_path(_,State,State,[]).
 retrace_path(Player,State,NewState,[H|T]) :-
-	write('Tracing: ' ), write(H), write(' in '), writeln([H|T]),
 	set(State, State1, H, Player),
 	retrace_path(Player,State1,NewState,T).
 
@@ -259,7 +281,6 @@ validmove(Player,State,[X,Y]) :-
 	member([X,Y],R).
 	
 
-
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%h(State,Val)%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -271,16 +292,13 @@ validmove(Player,State,[X,Y]) :-
 %   NOTE2. If State is not terminal h should be an estimate of
 %          the value of state (see handout on ideas about
 %          good heuristics.
-h(State,Val) :- 
-	terminal(State),
-	( winner(State, 1) 
-		-> val is -100
-		;  ( winner(State, 2) 
-			-> val is 100
-			;  tie(State) -> val is 0
-	)).
-h(State,Val) :-
-	val is 0.
+h(State,Val):-
+    terminal(State),
+    (winner(State,1) -> Val is -100;
+    winner(State,2) -> Val is 100;
+    tie(State) -> Val is 0
+    ).
+
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
 %

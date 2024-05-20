@@ -128,7 +128,7 @@ simplify (App "exp" x) = App "exp" (simplify x)
 -- Note: Code gets highlighted for unnecessary lambda 
 -- But this behavior is required in this task (i.e. dont remove)
 mkfun :: (EXPR, EXPR) -> (Float -> Float)
-mkfun (b,v) = \vi -> eval b [(unparse v, vi)]
+mkfun (b,Var v) = \vi -> eval b [(unparse v, vi)]
 
 
 -- Task 3: N-R iteration

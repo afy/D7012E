@@ -222,10 +222,9 @@ nextState(Player,[X,Y],State,NewState,NextPlayer) :-
 	dir(DX,DY),
 	set(State,NState,[X,Y],Player),
 	opponent(Player,NextPlayer),
-	write(Player), write(' moved '), writeln([X,Y]),
+	%write(Player), write(' moved '), writeln([X,Y]),
 	trace_flip_path(Player,NState,NewState,[X,Y],[DX,DY],[]),
-	showState(NewState),
-	writeln('DONE!').
+	showState(NewState).
 
 trace_flip_path(Player,State,NewState,[X,Y],[DX,DY],[]) :-
 	move(X,Y,DX,DY,X2,Y2),

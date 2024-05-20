@@ -1,3 +1,7 @@
+-- Haskell program parser
+-- Student: Hannes Furhoff, hanfur-0@student.ltu.se
+-- No code has been edited by student, except for comments.
+
 {- Test for Expr-}
 module TestExpr where
 

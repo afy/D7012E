@@ -1,3 +1,7 @@
+-- Haskell program parser
+-- Student: Hannes Furhoff, hanfur-0@student.ltu.se
+-- No code except for these comments have been edited by student
+
 module CoreParser(Parser, char, return, fail, (#), (!), (?), (#>), (>->),
                   Parse, parse, toString, fromString) where
 import Prelude hiding (return, fail)

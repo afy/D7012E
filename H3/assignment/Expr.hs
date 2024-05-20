@@ -1,3 +1,7 @@
+-- Haskell program parser
+-- Student: Hannes Furhoff, hanfur-0@student.ltu.se
+-- All code edited by student as task requires will be marked with comments
+
 module Expr(Expr, T, parse, fromString, value, toString) where
 
 {-

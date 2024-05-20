@@ -1,3 +1,7 @@
+-- Haskell program parser
+-- Student: Hannes Furhoff, hanfur-0@student.ltu.se
+-- All code edited by student as task requires will be marked with comments
+
 module Parser(module CoreParser, T, digit, digitVal, chars, letter, err,
               lit, number, iter, accept, require, token,
               spaces, word, (-#), (#-)) where
@@ -43,7 +47,7 @@ word = token (letter # iter letter >-> cons)
 
 -- Recurse and apply char in sequence, gives Just(('a', char "b....", ...
 -- Use >-> cons to concat into >-> Just("ab", char ....)
--- Remember to catch base case n=0 
+-- Remember to catch base case n=0 with value [] for cons (:[])
 chars :: Int -> Parser String
 chars 0 = return []
 chars n = char # chars (n-1) >-> cons

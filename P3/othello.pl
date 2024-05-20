@@ -114,12 +114,12 @@ getstones(State,P1,P2) :-
 winner(State,WinningPlayer) :- 
 	terminal(State),
 	getstones(State,P1,P2),
-	P1 < P2,  WinningPlayer = P1.
+	P1 < P2,  WinningPlayer = 1.
 
 winner(State,WinningPlayer) :- 
 	terminal(State),
 	getstones(State,P1,P2),
-	P1 > P2,  WinningPlayer = P2.
+	P1 > P2,  WinningPlayer = 2.
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -191,12 +191,14 @@ move(X,Y,DX,DY,X2,Y2) :-
 % T/F if path from P->P exists
 can_flip_path(Player,State,[X,Y],[DX,DY]) :-
 	move(X,Y,DX,DY,X2,Y2),
-	get(State,[X2,Y2],Tile),
-	( Tile == Player ; can_flip_path_step(Player,State,[X2,Y2],[DX,DY]) ).
+	opponent(Player,Opponent),
+	get(State,[X2,Y2],Opponent),
+	can_flip_path_step(Player,State,[X2,Y2],[DX,DY]).
 	
 can_flip_path_step(Player,State,[X,Y],[DX,DY]) :-
 	move(X,Y,DX,DY,X2,Y2),
 	get(State,[X2,Y2],Tile),
+	opponent(Player,Opponent),
 	( Tile == Player
 	; Tile == Opponent -> can_flip_path_step(Player,State,[X2,Y2],[DX,DY])).
 
@@ -220,18 +222,21 @@ nextState(Player,[X,Y],State,NewState,NextPlayer) :-
 	dir(DX,DY),
 	set(State,NState,[X,Y],Player),
 	opponent(Player,NextPlayer),
-	trace_flip_path(Player,NState,NewState,[X,Y],[DX,DY],[]).
+	write(Player), write(' moved '), writeln([X,Y]),
+	trace_flip_path(Player,NState,NewState,[X,Y],[DX,DY],[]),
+	showState(NewState),
+	writeln('DONE!').
 
 trace_flip_path(Player,State,NewState,[X,Y],[DX,DY],[]) :-
 	move(X,Y,DX,DY,X2,Y2),
-	get(State,[X2,Y2],Tile),
-	( Tile == Player ; 
-		trace_flip_path_step(Player,State,NewState,[X2,Y2],[DX,DY],[[X2,Y2]]) 
-	).
+	opponent(Player,Opponent),
+	get(State,[X2,Y2],Opponent),
+	trace_flip_path_step(Player,State,NewState,[X2,Y2],[DX,DY],[[X2,Y2]]).
 	
 trace_flip_path_step(Player,State,NewState,[X,Y],[DX,DY],Trace) :-
 	move(X,Y,DX,DY,X2,Y2),
 	get(State,[X2,Y2],Tile),
+	opponent(Player,Opponent),
 	( Tile == Player -> retrace_path(Player,State,NewState,Trace)
 	; Tile == Opponent -> 
 		trace_flip_path_step(Player,State,NewState,[X2,Y2],[DX,DY],[[X2,Y2]|Trace])

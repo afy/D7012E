@@ -11,16 +11,15 @@ import Prelude hiding (return, fail)
 -- Program is defined as a list of statements to be iteratively executed
 newtype T = Program [Statement.T]
 
--- (CoreParser.hs) parse: String -> Statement
--- (CoreParser.hs) tostring: Statement -> String
 instance Parse T where
   -- Parse should iteratively parse text into a list
   -- When executed, branches will be parsed in order
   -- According to exec
-  parse = iter Statement.parse
+  parse = iter Statement.parse >-> Program
 
   -- Concatmap is good here, traces the statement chain into a list
   -- While also enabling the ability to call toString on each step
-  toString = concatMap Statement.toString
-             
-exec = error "Program.exec not implemented"
+  toString (Program statements) = concatMap Statement.toString statements
+
+-- Start execution chain (partial application is responsible for input)    
+exec (Program statements) = Statement.exec statements Dictionary.empty

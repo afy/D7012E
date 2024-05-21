@@ -82,6 +82,7 @@ value (Var v) dict = case Dictionary.lookup v dict of
         Nothing -> error "Variable does not exist in lookup"
         Just a -> a
 
+value (Num n) dict = n
 value (Add e1 e2) dict = (value e1 dict) + (value e2 dict)
 value (Sub e1 e2) dict = (value e1 dict) - (value e2 dict)
 value (Mul e1 e2) dict = (value e1 dict) * (value e2 dict)
@@ -91,8 +92,6 @@ value (Div e1 e2) dict
  | (value e2 dict) == 0 = error "Invalid op; division by zero"
  | otherwise = (value e1 dict) `div` (value e2 dict)
 
--- Catch-all
-value _ _ = error "value not implemented for this expression"
 
 instance Parse Expr where
     parse = expr

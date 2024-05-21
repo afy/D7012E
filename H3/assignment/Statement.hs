@@ -15,38 +15,38 @@ data Statement =
     Skip |
     Read String |
     Write Expr.T | 
-    Begin|
+    Begin [Statement] |
     While Expr.T Statement 
     deriving Show
 
 -- Builders: Parse out format, then pass on to build using >->
--- (string is parsed at that point, valid build)
 parse_assignment = word #- accept ":=" # Expr.parse #- require ";" >-> buildAss
 buildAss (v, e) = Assignment v e
 
 -- Format: "if <expr> then <statement> else statement"
 --  Messy input due to nested expr/stmnts but works for now. Look into cons before build call
-parse_ifelse = accept "if" # Expr.parse #- require "then" # parse #- require "else" # parse >-> buildIfElse
+parse_ifelse = accept "if" -# Expr.parse #- require "then" # parse #- require "else" # parse >-> buildIfElse
 buildIfElse ((e,st),sf) = If e st sf
 
 -- Format: "skip;"
-parse_skip = accept "skip" #- require ";" >-> buildSkip
+parse_skip = accept "skip" # require ";" >-> buildSkip
 buildSkip _ = Skip
 
 -- Format: "read <string>;"
-parse_read = accept "read" # word #- require ";" >-> buildRead
+parse_read = accept "read" -# word #- require ";" >-> buildRead
 buildRead (v) = Read v
 
 -- Format: "write <expr>;"
-parse_write = accept "write" # Expr.parse #- require ";" >-> buildWrite
+parse_write = accept "write" -# Expr.parse #- require ";" >-> buildWrite
 buildWrite (expr) = Write expr 
 
--- Format: Begin
-parse_begin = accept "begin" >-> buildBegin
-buildBegin _ = Begin
+-- Format: "begin <statements> end"
+-- Note: iter is required on parse, as several statements can appear within
+parse_begin = accept "begin" -# iter parse #- require "end" >-> buildBegin
+buildBegin (stmt_chain) = Begin stmt_chain
 
 -- Format: "while <expr> do"
-parse_while = accept "while" # Expr.parse #- require "do" # parse >-> buildWhile
+parse_while = accept "while" -# Expr.parse #- require "do" # parse >-> buildWhile
 buildWhile (e,s) = While e s
 
 
@@ -54,13 +54,11 @@ buildWhile (e,s) = While e s
 
 
 
--- Execution of parsed statements
--- exec Program = exec (StatementList) = exec (this_stmt : next_stmts)
+-- exec Program = exec (this_stmt : next_stmts)
 exec :: [T] -> Dictionary.T String Integer -> [Integer] -> [Integer]
 
 -- Assignment: string (dict key) and value inserted into dict
 --    continue other statements with new dict (no input modification)
--- Dictionary.insert: (k,v), dict => new_dict
 exec (Assignment var expr : next_stmts) dict input =
     exec next_stmts (Dictionary.insert (var, (Expr.value expr dict)) dict) input
 
@@ -86,13 +84,17 @@ exec (Read var: next_stmts) dict input =
 exec (Write expr : next_stmts) dict input =
     Expr.value expr dict : exec next_stmts dict input
 
--- Begin: 
+-- Begin: Group several statements togheter, used for multi-line whiles
+-- In practice: execute group (/chain) before executing the next statement
+exec (Begin stmt_chain : next_stmts) dict input =
+    exec (stmt_chain ++ next_stmts) dict input
 
 -- While: If condition is false (0, value expr is Int), move on as past
--- If it is positive, 
-exec (While cond s : next_stmts) dict input 
- | cond == 0 = exec next_stmts dict input
- | otherwise =  0
+-- If it is positive: Take the clauses within the statement and append to exec chain 
+-- Dont forget to add the actual While statement aswell
+exec (While cond internal_stmts : next_stmts) dict input 
+ | (Expr.value cond dict) > 0 = exec (internal_stmts : While cond internal_stmts : next_stmts) dict input
+ | otherwise = exec next_stmts dict input
 
 -- Catch-all
 exec [] _ _ = []
@@ -102,25 +104,20 @@ exec [] _ _ = []
 
 
 
--- Parsing
--- (CoreParser.hs) parse: string -> Statement (Builders defined earlier)
--- (CoreParser.hs) toString: Statement -> string
 instance Parse Statement where
+
   -- parse behavior: Identify struct (using (!) on all possible builders until success) 
-  parse = parse_assignment ! parse_ifelse ! parse_skip ! parse_read 
-                           ! parse_write ! parse_begin ! parse_while ! err "No matching parser"
+  parse = parse_assignment ! parse_skip ! parse_begin ! parse_ifelse ! parse_while
+          ! parse_read ! parse_write
   -- toString: use the helper stmtToStr below (for matching Statement construct)
   toString = stmtToStr
 
 
-
-
-
--- Format: "<var> := <expr>;"
+-- Format: "<string> := <expr>;"
 stmtToStr :: Statement -> String
-stmtToStr (Assignment v e) = Expr.toString v ++ ":=" ++ Expr.toString e ++ ";"
+stmtToStr (Assignment v e) = v ++ ":=" ++ Expr.toString e ++ ";"
 
--- Format: "if <expr> then <statement> else statement>"
+-- Format: "if <expr> then <statementTrue> else statementFalse>"
 stmtToStr (If e st sf) = "if"++Expr.toString e++"then"++toString st++"; else"++toString sf++";"
 
 -- Format: "skip;"
@@ -132,8 +129,8 @@ stmtToStr (Read v) = "read" ++ v ++ ";"
 -- Format: "write <expr>;"
 stmtToStr (Write e) = "write" ++ Expr.toString e ++ ";"
 
--- Format: Begin
-stmtToStr (Begin) = "begin"
+-- Format: "begin <statement_list> end"
+stmtToStr (Begin s) = "begin" ++ concatMap toString s ++ "end"
 
--- Format: "while <expr> do"
+-- Format: "while <expr> do <statement>"
 stmtToStr (While e s) = "while" ++ Expr.toString e ++ "do" ++ toString s

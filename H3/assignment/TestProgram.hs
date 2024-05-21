@@ -55,11 +55,11 @@ sp = putStr (toString p)
 -- Returns: [3,6,9,12,15] OK
 rp = Program.exec p [3,16]
 
--- Returns [0,0,0,0,0,0,0,0,0,0,1,10000000000]
+-- Returns [0,0,0,0,0,0,0,0,0,0,1,10000000000] NOT SURE 
 rp1 = Program.exec p1 [1024, 2]
 
--- Returns: []
-rp2 = Program.exec p2
-
 -- Returns: [1] OK
-rp3 = Program.exec p3 [1]
+rp2 = Program.exec p2 []
+
+-- Returns: [1337] OK
+rp3 = Program.exec p3 [1337]

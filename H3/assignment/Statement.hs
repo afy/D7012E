@@ -16,7 +16,8 @@ data Statement =
     Read String |
     Write Expr.T | 
     Begin [Statement] |
-    While Expr.T Statement 
+    While Expr.T Statement |
+    Repeat Statement Expr.T 
     deriving Show
 
 -- Builders: Parse out format, then pass on to build using >->
@@ -24,7 +25,7 @@ parse_assignment = word #- accept ":=" # Expr.parse #- require ";" >-> buildAss
 buildAss (v, e) = Assignment v e
 
 -- Format: "if <expr> then <statement> else statement"
---  Messy input due to nested expr/stmnts but works for now. Look into cons before build call
+--  Messy input due to nested expr/stmnts but works for now.
 parse_ifelse = accept "if" -# Expr.parse #- require "then" # parse #- require "else" # parse >-> buildIfElse
 buildIfElse ((e,st),sf) = If e st sf
 
@@ -48,6 +49,10 @@ buildBegin (stmt_chain) = Begin stmt_chain
 -- Format: "while <expr> do"
 parse_while = accept "while" -# Expr.parse #- require "do" # parse >-> buildWhile
 buildWhile (e,s) = While e s
+
+-- Format "repeat <statement> until <expr>;"
+parse_repeat = accept "repeat" -# parse #- require "until" # Expr.parse #- require ";" >-> buildRepeat
+buildRepeat (s,e) = Repeat s e 
 
 
 
@@ -96,6 +101,13 @@ exec (While cond internal_stmts : next_stmts) dict input
  | (Expr.value cond dict) > 0 = exec (internal_stmts : While cond internal_stmts : next_stmts) dict input
  | otherwise = exec next_stmts dict input
 
+-- Repeat: Same as while, but is always ran at least once
+-- Same cond case (>0) but for other execute internal_stmts before next_stmts
+exec (Repeat internal_stmts cond : next_stmts) dict input = exec (internal_stmts : action) dict input where 
+    action 
+        | Expr.value cond dict <= 0 = Repeat internal_stmts cond : next_stmts
+        | otherwise = next_stmts
+
 -- Catch-all
 exec [] _ _ = []
 
@@ -107,30 +119,33 @@ exec [] _ _ = []
 instance Parse Statement where
 
   -- parse behavior: Identify struct (using (!) on all possible builders until success) 
-  parse = parse_assignment ! parse_skip ! parse_begin ! parse_ifelse ! parse_while
-          ! parse_read ! parse_write
+  parse = parse_assignment ! parse_skip ! parse_begin ! parse_ifelse 
+        ! parse_while ! parse_repeat ! parse_read ! parse_write
   -- toString: use the helper stmtToStr below (for matching Statement construct)
   toString = stmtToStr
 
 
 -- Format: "<string> := <expr>;"
 stmtToStr :: Statement -> String
-stmtToStr (Assignment v e) = v ++ ":=" ++ Expr.toString e ++ ";"
+stmtToStr (Assignment v e) = v ++ " := " ++ Expr.toString e ++ ";\n"
 
 -- Format: "if <expr> then <statementTrue> else statementFalse>"
-stmtToStr (If e st sf) = "if"++Expr.toString e++"then"++toString st++"; else"++toString sf++";"
+stmtToStr (If e st sf) = "if "++Expr.toString e++" then "++toString st++"; else "++toString sf++";\n"
 
 -- Format: "skip;"
-stmtToStr (Skip) = "skip;"
+stmtToStr (Skip) = "skip;\n"
 
 -- Format: "read <string>;"
-stmtToStr (Read v) = "read" ++ v ++ ";"
+stmtToStr (Read v) = "read" ++ v ++ ";\n"
 
 -- Format: "write <expr>;"
-stmtToStr (Write e) = "write" ++ Expr.toString e ++ ";"
+stmtToStr (Write e) = "write " ++ Expr.toString e ++ ";\n"
 
 -- Format: "begin <statement_list> end"
-stmtToStr (Begin s) = "begin" ++ concatMap toString s ++ "end"
+stmtToStr (Begin s) = "begin " ++ concatMap toString s ++ "end \n"
 
 -- Format: "while <expr> do <statement>"
-stmtToStr (While e s) = "while" ++ Expr.toString e ++ "do" ++ toString s
+stmtToStr (While e s) = "while " ++ Expr.toString e ++ " do " ++ toString s
+
+-- Format "repeat <statement> until e"
+stmtToStr (Repeat s e) = "repeat" ++ toString s ++ "until " ++ Expr.toString e ++ "\n"

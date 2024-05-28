@@ -11,8 +11,11 @@
 
 
 %do not chagne the follwoing line!
-% :- ensure_loaded('play.pl').
-:- ensure_loaded('stupid.pl').
+:- ensure_loaded('play.pl').
+% :- ensure_loaded('stupid.pl').
+
+:- ensure_loaded('rndBoard.pl').
+:- ensure_loaded('testboards.pl').
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -57,42 +60,12 @@
 %
 % given helper: Inital state of the board
 
-%([ [.,.,.,.,.,.], 
-%            [.,.,.,.,.,.],
-%	    	[.,.,1,2,.,.], 
-%	    	[.,.,2,1,.,.], 
-%            [.,.,.,.,.,.], 
-%	    	[.,.,.,.,.,.] ]).
-
 initBoard([ [.,.,.,.,.,.], 
             [.,.,.,.,.,.],
 	    	[.,.,1,2,.,.], 
 	    	[.,.,2,1,.,.], 
             [.,.,.,.,.,.], 
 	    	[.,.,.,.,.,.] ]).
-
-testBoard1([ [.,2,.,.,.,2], 
-             [.,.,1,.,1,.],
-             [.,.,.,1,.,.],
-             [.,.,1,1,1,.],
-             [.,1,.,1,.,.],
-             [.,.,.,2,.,.] ]).
-
-testBoard2([[.,2,1,1,1,2], 
-			[2,2,2,2,2,1], 
-			[1,2,2,2,2,1],
-			[1,2,2,1,2,1], 
-			[1,2,2,2,1,1],
-			[2,1,1,1,1,.]]).
-
-testBoard3([[.,.,.,.,.,.],
-		       [.,.,.,.,.,1],
-		       [.,.,.,.,.,1],
-		       [.,.,.,.,.,1],
-		       [.,.,.,.,.,1],
-		       [.,1,1,1,1,2]]).
-
-:-ensure_loaded('rndBoard.pl').
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
 %
@@ -105,12 +78,15 @@ testBoard3([[.,.,.,.,.,.],
 %initialize(InitialState, 1) :- rndBoardXYZ(InitialState).
 initialize(InitialState, 1) :- initBoard(InitialState).
 %initialize(InitialState, 1) :- testBoard1(InitialState).
-%initialize(InitialState, 1) :- testBoard2(InitialState).
-%initialize(InitialState, 1) :- testBoard3(InitialState).
+%initialize(InitialState, 1) :- flipDiagULtoLR(InitialState).
+%initialize(InitialState, 1) :- flipAll8Dirs1(InitialState).
 
+
+% Opponent ID rule
 opponent(1,2).
 opponent(2,1).
 
+% Direction rule; DX,DY coords for all 8 directions
 dir(-1,0). 	% W
 dir(1,0).	% E
 dir(0,-1). 	% N
@@ -146,13 +122,14 @@ getstones(State,C1,C2) :-
 	countstones(State,2,C2).
 
 winner(State,Player) :- 
-	terminal(State), !,
-	getstones(State,P1,P2), !,
-	P1 =\= P2, !,
+	terminal(State), ! ,
+	getstones(State,P1,P2), !, 
+	P1 =\= P2, !, 
 	(P1 < P2 
 		-> Player is 1
 		;  Player is 2	
 	).
+
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
 %
@@ -211,8 +188,15 @@ printList([H | L]) :-
 %   - returns list MvList of all legal moves Plyr can make in State
 %
 moves(Player,State,MyList) :- 
-	findall([X,Y], ( validmove(Player,State,[X,Y]) ), MvL),
-	( MvL == [] -> MyList = [null] ; list_to_set(MvL,MyList)).
+	findall([X,Y], ( 
+		between(0,5,X),
+		between(0,5,Y),
+		get(State, [X,Y], '.'),
+		dir(DX,DY),
+		is_adjacent_opponent(Player,[X,Y],[DX,DY],State),	
+		can_flip_path(Player,[X,Y],[DX,DY],State)
+	), MvL),
+	list_to_set(MvL, MyList).
 
 move(X,Y,DX,DY,X2,Y2) :- 
 	X2 is X + DX, Y2 is Y + DY, 
@@ -221,6 +205,10 @@ move(X,Y,DX,DY,X2,Y2) :-
 in_bounds(X2,Y2) :-
 	X2 >= 0, X2 < 6, 
 	Y2 >= 0, Y2 < 6. 
+
+is_adjacent_opponent(Player,[X,Y],[DX,DY],State) :- 
+	move(X,Y,DX,DY,X2,Y2), opponent(Player,Opponent), get(State,[X2,Y2],Opponent).
+
 
 % T/F if path from P->P exists
 can_flip_path(Player,[X,Y],[DX,DY],State) :-
@@ -238,10 +226,6 @@ can_flip_path_step(Player,[X,Y],[DX,DY],State) :-
 	; Tile == '.' -> false
 	; can_flip_path_step(Player,[X2,Y2],[DX,DY],State) 
 	).
-
-is_adjacent_opponent(Player,[X,Y],[DX,DY],State) :- 
-	move(X,Y,DX,DY,X2,Y2), opponent(Player,Opponent), get(State,[X2,Y2],Opponent).
-
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -263,7 +247,6 @@ nextState(Player,'n',State,State,NextPlayer) :- % Skip action
 
 nextState(Player,null,State,State,NextPlayer) :- % Skip action (computer gives null instead of 'n'...)
 	opponent(Player, NextPlayer).
-
 
 
 % Go through all directions and try to flip
@@ -305,7 +288,15 @@ validmove(Player,State,[X,Y]) :-
 	dir(DX,DY),
 	is_adjacent_opponent(Player,[X,Y],[DX,DY],State),	
 	can_flip_path(Player,[X,Y],[DX,DY],State).
-	
+
+validmove(Player,State,'n') :-
+	moves(Player,State,Moves),
+	Moves == [].
+
+validmove(Player,State,null) :-
+	moves(Player,State,Moves),
+	Moves == [].
+
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
 %

@@ -1,50 +1,47 @@
 Before grading:
-- Indent/Polish:        Done
-- Play h/c, null moves: Done
-- Testboard cases:      Done
-- rndboard, stupid:     Done
-- eval goal:            Done
-
-- Ai wins very often: 
-- motivate h: V2-V1, linear depending on stone diff.
+- Indent/Polish:        
+- Play h/c, null moves: 
+- Testboard cases:      
+- rndboard, stupid:     
+- eval goal:            
 
 
 
 Win statistics, random board:
-P1(Stupid):     7
-P2 (computer):  5
-Ties:           1
+P1(Stupid):     
+P2 (computer):  
+Ties:           
 
 
 
 
 %%%%%%%%%%%%%%%%%%%%% Testboards.pl :
-% TB1: P2 Win
-% TB2: P2 Win
-% TB3: Tie
+% TB1: OK (P1 WIN)
+% TB2: OK (P1 WIN)
+% TB3: OK (P2 WIN)
 
-% FLIP_RLTOP: P1 move flips line => 1
-% FLIP_LRBTTM: P2 move flips line => 2
-% FLIP_TBleft: P2 move flips line
-% FLIP_BTright: P1 move flips line
-% FLIP_DIAGULTOLR: P1 move flips line
-% FLIP_DIAGURTOLL: P2 move flips line
-% NOMNOFA: Immidiate tie
-% NOMNOFB: Immidiate tie
-% FLIPRLO1: Flips immidiate
-% FLIPALL81: P1 move => flip 
-% FLIPALL82: P2 move => flip 
+% FLIP_RLTOP:       OK
+% FLIP_LRBTTM:      OK
+% FLIP_TBleft:      OK 
+% FLIP_BTright:     OK
+% FLIP_DIAGULTOLR:  OK
+% FLIP_DIAGURTOLL:  OK
+% NOMNOFA:          OK
+% NOMNOFB:          OK
+% FLIPRLO1:         CHECK AGAIN WITH PLAY.PL
+% FLIPALL81:        OK
+% FLIPALL82:        OK
 
-% TIESIN2: Both playes one move => Tie w. FB
-% TIE4EC: Immidiate tie
-% TIE4EB: Immidiate tie 
-% TIE1MV: P1 one move => tie, 4 empty
-% TIE301MV: P1 Move => 3-3 tie
-% TIE302MV: P1 no move, P2 move 1 => 3-3 tie
+% TIESIN2:  OK
+% TIE4EC:   OK
+% TIE4EB:   OK
+% TIE1MV:   OK 
+% TIE301MV: OK
+% TIE302MV: OK
 
-% WININ2: Both players move, then P1 wins
-% ONLY2: P1 wins round 0 
-% ONLY1: P2 wins round 0
+% WININ2: OK
+% ONLY2:  OK
+% ONLY1:  OK
 
-% FORCENULL2: P2 no moves, P1 two moves => P2 win
-% FORCENULL1: P1 no moves, P2 two moves => P1 win
+% FORCENULL2: OK
+% FORCENULL1: OK

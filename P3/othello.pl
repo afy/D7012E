@@ -216,8 +216,7 @@ moves(Player,State,MyList) :-
 
 move(X,Y,DX,DY,X2,Y2) :- 
 	X2 is X + DX, Y2 is Y + DY, 
-	X2 >= 0, X2 < 6, 
-	Y2 >= 0, Y2 < 6. 
+	in_bounds(X2,Y2).
 
 in_bounds(X2,Y2) :-
 	X2 >= 0, X2 < 6, 
@@ -235,7 +234,6 @@ can_flip_path(Player,[X,Y],[DX,DY],State) :-
 can_flip_path_step(Player,[X,Y],[DX,DY],State) :-
 	move(X,Y,DX,DY,X2,Y2),
 	get(State,[X2,Y2],Tile),
-	opponent(Player,Opponent),
 	( Tile == Player -> true
 	; Tile == '.' -> false
 	; can_flip_path_step(Player,[X2,Y2],[DX,DY],State) 
@@ -257,33 +255,40 @@ is_adjacent_opponent(Player,[X,Y],[DX,DY],State) :-
 nextState(Player,[X,Y],State,NewState,NextPlayer) :-
 	opponent(Player,NextPlayer),
 	set(State,State1,[X,Y],Player),
-	Dirs = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]],
-	dir(DX,DY),
-	trace_flip_path(Player,[X,Y],[DX,DY],State1,NewState).
+	Dirs = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]], % All directions need to be handled
+	trace_flip_path(Player,[X,Y],Dirs,State1,NewState).
 
 nextState(Player,'n',State,State,NextPlayer) :- % Skip action
 	opponent(Player, NextPlayer).
+
 nextState(Player,null,State,State,NextPlayer) :- % Skip action (computer gives null instead of 'n'...)
 	opponent(Player, NextPlayer).
 
+
+
+% Go through all directions and try to flip
 trace_flip_path(_,_,[],S,S).
 trace_flip_path(Player,[X,Y],[Dir|T],State,NewState) :-
-	trace_flip_path_step(Player,[X,Y],Dir,[],State,ResState),
-	trace_flip_path(Player,[X,Y],T,ResState,NewState).
+	% On failure make sure to NOT update the state.
+	(trace_flip_path_step(Player,[X,Y],Dir,[],State,ResState) -> MidState = ResState
+	; MidState = State
+	),
+	trace_flip_path(Player,[X,Y],T,MidState,NewState).
 
+% Find a flippable path, or return
 trace_flip_path_step(Player,[X,Y],[DX,DY],Trace,State,NewState) :-
 	move(X,Y,DX,DY,X2,Y2),
-	( not(in_bounds(X2,Y2)) -> true ; % move_
-		get(State,[X2,Y2],Tile),
-		opponent(Player,Opponent),
-		( Tile == Player -> retrace_path(Player,Trace,State,NewState)
+	get(State,[X2,Y2],Tile), 
+	opponent(Player,Opponent),
+	( Tile == Player -> retrace_path(Player,Trace,State,NewState)
 		; Tile == Opponent -> trace_flip_path_step(Player,[X2,Y2],[DX,DY],[[X2,Y2]|Trace],State,NewState)
 		; NewState = State
-	)).
+	).
 
-retrace_path(_,[],State,State).
+% On a valid path found, trace through the path and flip
+retrace_path(_,[],S,S).
 retrace_path(Player,[H|T],State,NewState) :-
-	set(State, State1, H, Player),
+	set(State,State1,H,Player),
 	retrace_path(Player,T,State1,NewState).
 
 
@@ -297,7 +302,6 @@ validmove(Player,State,[X,Y]) :-
 	between(0,5,X),
 	between(0,5,Y),
 	get(State, [X,Y], '.'),
-	% Dirs = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]],
 	dir(DX,DY),
 	is_adjacent_opponent(Player,[X,Y],[DX,DY],State),	
 	can_flip_path(Player,[X,Y],[DX,DY],State).

@@ -1,8 +1,8 @@
 Before grading:
 - Indent/Polish:        Done
 - Play h/c, null moves: Done
-- Testboard cases: 
-- rndboard, stupid: 
+- Testboard cases:      Done
+- rndboard, stupid:     Done
 - eval goal:            Done
 
 - Ai wins very often: 
@@ -10,18 +10,18 @@ Before grading:
 
 
 
-Win statistics:
-P1(Stupid): 
-P2 (computer): 
-
+Win statistics, random board:
+P1(Stupid):     7
+P2 (computer):  5
+Ties:           1
 
 
 
 
 %%%%%%%%%%%%%%%%%%%%% Testboards.pl :
-% TB1: 
-% TB2: 
-% TB3: 
+% TB1: P2 Win
+% TB2: P2 Win
+% TB3: Tie
 
 % FLIP_RLTOP: P1 move flips line => 1
 % FLIP_LRBTTM: P2 move flips line => 2
@@ -31,7 +31,7 @@ P2 (computer):
 % FLIP_DIAGURTOLL: P2 move flips line
 % NOMNOFA: Immidiate tie
 % NOMNOFB: Immidiate tie
-% FLIPRLO1: 
+% FLIPRLO1: Flips immidiate
 % FLIPALL81: P1 move => flip 
 % FLIPALL82: P2 move => flip 
 

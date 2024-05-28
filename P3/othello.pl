@@ -64,14 +64,35 @@
 %            [.,.,.,.,.,.], 
 %	    	[.,.,.,.,.,.] ]).
 
-initBoard([[.,.,.,2,.,.],
-	     [.,.,.,1,.,.],
-	     [.,.,.,1,.,.],
-	     [1,2,2,.,2,1],
-	     [.,.,.,1,.,.],
-	     [.,.,.,2,.,.]]).
+initBoard([ [.,.,.,.,.,.], 
+            [.,.,.,.,.,.],
+	    	[.,.,1,2,.,.], 
+	    	[.,.,2,1,.,.], 
+            [.,.,.,.,.,.], 
+	    	[.,.,.,.,.,.] ]).
 
+testBoard1([ [.,2,.,.,.,2], 
+             [.,.,1,.,1,.],
+             [.,.,.,1,.,.],
+             [.,.,1,1,1,.],
+             [.,1,.,1,.,.],
+             [.,.,.,2,.,.] ]).
 
+testBoard2([[.,2,1,1,1,2], 
+			[2,2,2,2,2,1], 
+			[1,2,2,2,2,1],
+			[1,2,2,1,2,1], 
+			[1,2,2,2,1,1],
+			[2,1,1,1,1,.]]).
+
+testBoard3([[.,.,.,.,.,.],
+		       [.,.,.,.,.,1],
+		       [.,.,.,.,.,1],
+		       [.,.,.,.,.,1],
+		       [.,.,.,.,.,1],
+		       [.,1,1,1,1,2]]).
+
+:-ensure_loaded('rndBoard.pl').
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
 %
@@ -80,9 +101,12 @@ initBoard([[.,.,.,2,.,.],
 %%%  holds iff InitialState is the initial state and 
 %%%  InitialPlyr is the player who moves first. 
 % Human moves first = 1, robot = 2
-initialize(InitialState, InitialPlayer) :- 
-	initBoard(InitialState),
-	InitialPlayer = 1.
+
+%initialize(InitialState, 1) :- rndBoardXYZ(InitialState).
+initialize(InitialState, 1) :- initBoard(InitialState).
+%initialize(InitialState, 1) :- testBoard1(InitialState).
+%initialize(InitialState, 1) :- testBoard2(InitialState).
+%initialize(InitialState, 1) :- testBoard3(InitialState).
 
 opponent(1,2).
 opponent(2,1).
@@ -108,6 +132,7 @@ countstones([],_,0).
 countstones([R1|RR],Player,Tot) :-
 	countrow(R1,Player,Tot2), countstones(RR,Player,RecTot),
 	Tot is Tot2 + RecTot.
+
 countrow([],_,0).
 countrow([V1|VR],Player,Tot) :- 
 	( V1==Player 
@@ -125,8 +150,8 @@ winner(State,Player) :-
 	getstones(State,P1,P2), !,
 	P1 =\= P2, !,
 	(P1 < P2 
-		-> Player = 1
-		;  Player = 2	
+		-> Player is 1
+		;  Player is 2	
 	).
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -149,6 +174,8 @@ tie(State) :-
 %% define terminal(State). 
 %   - true if State is a terminal   
 invalid_moves([]).
+invalid_moves([null]).
+invalid_moves(['n']).
 terminal(State) :- 
 	moves(1,State,LiP), 
 	moves(2,State,LiR),
@@ -185,28 +212,36 @@ printList([H | L]) :-
 %
 moves(Player,State,MyList) :- 
 	findall([X,Y], ( validmove(Player,State,[X,Y]) ), MvL),
-	list_to_set(MvL,MyList).
+	( MvL == [] -> MyList = [null] ; list_to_set(MvL,MyList)).
 
 move(X,Y,DX,DY,X2,Y2) :- 
 	X2 is X + DX, Y2 is Y + DY, 
 	X2 >= 0, X2 < 6, 
 	Y2 >= 0, Y2 < 6. 
 
+in_bounds(X2,Y2) :-
+	X2 >= 0, X2 < 6, 
+	Y2 >= 0, Y2 < 6. 
+
 % T/F if path from P->P exists
-can_flip_path(Player,State,[X,Y],[DX,DY]) :-
+can_flip_path(Player,[X,Y],[DX,DY],State) :-
 	move(X,Y,DX,DY,X2,Y2),
 	opponent(Player,Opponent),
-	get(State,[X2,Y2],Opponent),
-	can_flip_path_step(Player,State,[X2,Y2],[DX,DY]).
+	get(State,[X2,Y2],Tile),
+	( Tile==Opponent -> can_flip_path_step(Player,[X2,Y2],[DX,DY],State)
+	; false
+	).
 	
-can_flip_path_step(Player,State,[X,Y],[DX,DY]) :-
+can_flip_path_step(Player,[X,Y],[DX,DY],State) :-
 	move(X,Y,DX,DY,X2,Y2),
 	get(State,[X2,Y2],Tile),
 	opponent(Player,Opponent),
-	( Tile == Player
-	; Tile == Opponent -> can_flip_path_step(Player,State,[X2,Y2],[DX,DY])).
+	( Tile == Player -> true
+	; Tile == '.' -> false
+	; can_flip_path_step(Player,[X2,Y2],[DX,DY],State) 
+	).
 
-is_adjacent_opponent(Player,State,[X,Y],[DX,DY]) :- 
+is_adjacent_opponent(Player,[X,Y],[DX,DY],State) :- 
 	move(X,Y,DX,DY,X2,Y2), opponent(Player,Opponent), get(State,[X2,Y2],Opponent).
 
 
@@ -220,36 +255,36 @@ is_adjacent_opponent(Player,State,[X,Y],[DX,DY]) :-
 %     state) and NextPlayer (i.e. the next player who will move).
 %
 nextState(Player,[X,Y],State,NewState,NextPlayer) :-
-	validmove(Player,State,[X,Y]),
 	opponent(Player,NextPlayer),
 	set(State,State1,[X,Y],Player),
 	Dirs = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]],
-	trace_flip_path(Player,State1,NewState,[X,Y],Dirs).
+	dir(DX,DY),
+	trace_flip_path(Player,[X,Y],[DX,DY],State1,NewState).
 
 nextState(Player,'n',State,State,NextPlayer) :- % Skip action
 	opponent(Player, NextPlayer).
-
 nextState(Player,null,State,State,NextPlayer) :- % Skip action (computer gives null instead of 'n'...)
 	opponent(Player, NextPlayer).
 
-trace_flip_path(_,S,S,_,[]).
-trace_flip_path(Player,State,NewState,[X,Y],[[DX,DY]|T]) :-
-	trace_flip_path_step(Player,State,ResState,[X,Y],[DX,DY],[]),
-	trace_flip_path(Player,ResState,NewState,[X,Y],T).
+trace_flip_path(_,_,[],S,S).
+trace_flip_path(Player,[X,Y],[Dir|T],State,NewState) :-
+	trace_flip_path_step(Player,[X,Y],Dir,[],State,ResState),
+	trace_flip_path(Player,[X,Y],T,ResState,NewState).
 
-trace_flip_path_step(Player,State,NewState,[X,Y],[DX,DY],Trace) :-
+trace_flip_path_step(Player,[X,Y],[DX,DY],Trace,State,NewState) :-
 	move(X,Y,DX,DY,X2,Y2),
-	get(State,[X2,Y2],Tile),
-	opponent(Player,Opponent),
-	( Tile == Player -> retrace_path(Player,State,NewState,Trace)
-	; Tile == Opponent -> 
-		trace_flip_path_step(Player,State,NewState,[X2,Y2],[DX,DY],[[X2,Y2]|Trace])
-	).
+	( not(in_bounds(X2,Y2)) -> true ; % move_
+		get(State,[X2,Y2],Tile),
+		opponent(Player,Opponent),
+		( Tile == Player -> retrace_path(Player,Trace,State,NewState)
+		; Tile == Opponent -> trace_flip_path_step(Player,[X2,Y2],[DX,DY],[[X2,Y2]|Trace],State,NewState)
+		; NewState = State
+	)).
 
-retrace_path(_,State,State,[]).
-retrace_path(Player,State,NewState,[H|T]) :-
+retrace_path(_,[],State,State).
+retrace_path(Player,[H|T],State,NewState) :-
 	set(State, State1, H, Player),
-	retrace_path(Player,State1,NewState,T).
+	retrace_path(Player,T,State1,NewState).
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -262,9 +297,10 @@ validmove(Player,State,[X,Y]) :-
 	between(0,5,X),
 	between(0,5,Y),
 	get(State, [X,Y], '.'),
+	% Dirs = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]],
 	dir(DX,DY),
-	is_adjacent_opponent(Player,State,[X,Y],[DX,DY]),	
-	can_flip_path(Player,State,[X,Y],[DX,DY]).
+	is_adjacent_opponent(Player,[X,Y],[DX,DY],State),	
+	can_flip_path(Player,[X,Y],[DX,DY],State).
 	
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
